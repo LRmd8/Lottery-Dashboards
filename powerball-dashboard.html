@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Powerball Stock Dashboard</title>
+
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --secondary: #ef4444;
+            --secondary-dark: #dc2626;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --surface-light: #334155;
+            --text: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: #334155;
+            --border-light: #475569;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --blue: #3b82f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        /* =========================
+           HEADER
+        ========================= */
+
+        .header {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .header .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* =========================
+           REFRESH BUTTON
+        ========================= */
+
+        .refresh-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 1rem;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(
+                135deg,
+                var(--primary),
+                var(--primary-dark)
+            );
+            color: white;
+            border: none;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .refresh-btn:active {
+            transform: translateY(0);
+        }
+
+        .refresh-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .refresh-btn .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* =========================
+           LOADING
+        ========================= */
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(16, 185, 129, 0.3);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* =========================
+           SUMMARY CARDS
+        ========================= */
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            background-color: var(--surface);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-title {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .card-value.secondary {
+            color: var(--secondary);
+        }
+
+        .card-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* =========================
+           MAIN GRID
+        ========================= */
+
+        .grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* =========================
+           RIGHT COLUMN
+        ========================= */
+
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* =========================
+           SECTION
+        ========================= */
+
+        .section {
+            background-color: var(--surface);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(
+                135deg,
+                rgba(16, 185, 129, 0.1),
+                rgba(16, 185, 129, 0.05)
+            );
+        }
+
+        .section-header.overdue {
+            background: linear-gradient(
+                135deg,
+                rgba(239, 68, 68, 0.1),
+                rgba(239, 68, 68, 0.05)
+            );
+        }
+
+        .section-header.frequency {
+            background: linear-gradient(
+                135deg,
+                rgba(59, 130, 246, 0.1),
+                rgba(59, 130, 246, 0.05)
+            );
+        }
+
+        .section-header h2 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .section-header.overdue h2 {
+            color: var(--secondary);
+        }
+
+        .section-header.frequency h2 {
+            color: var(--blue);
+        }
+
+        /* =========================
+           TABLE
+        ========================= */
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+        }
+
+        th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+        tr {
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:nth-child(even) {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        tr:hover {
+            background-color: rgba(16, 185, 129, 0.05);
+        }
+
+        .numbers {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.05em;
+        }
+
+        .score-high {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .score-medium {
+            color: var(--warning);
+            font-weight: 600;
+        }
+
+        .score-low {
+            color: var(--secondary);
+            font-weight: 600;
+        }
+
+        /* =========================
+           OVERDUE CHART
+        ========================= */
+
+        .chart-container {
+            padding: 1rem 1.5rem;
+            min-height: 300px;
+            height: auto;
+        }
+
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .bar-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .bar-label {
+            width: 40px;
+            font-size: 0.875rem;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .bar-container {
+            flex: 1;
+            height: 20px;
+            background-color: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .bar-value {
+            width: 50px;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-align: right;
+        }
+
+        /* =========================
+           LAST 10 DRAWS FREQUENCY
+        ========================= */
+
+        .last-draws-list {
+            padding: 1rem 1.5rem;
+        }
+
+        .last-draw-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.65rem 0.9rem;
+            background-color: rgba(59, 130, 246, 0.08);
+            border-radius: 0.375rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .last-draw-number {
+            font-weight: 600;
+            color: var(--blue);
+            font-size: 1rem;
+        }
+
+        .last-draw-frequency {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* =========================
+           BOTTOM ALL-NUMBERS CHART
+        ========================= */
+
+        .all-numbers-section {
+            margin-top: 1.5rem;
+        }
+
+        .frequency-chart-container {
+            padding: 1rem 1.5rem;
+            height: 430px;
+        }
+
+        .frequency-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 100%;
+            padding: 1rem 0 2.5rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .frequency-bar-item {
+            flex: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 0.2rem;
+            min-width: 0;
+        }
+
+        .frequency-bar {
+            width: 100%;
+            min-height: 2px;
+            background-color: var(--blue);
+            border-radius: 3px 3px 0 0;
+            transition: height 0.5s ease;
+        }
+
+        .frequency-value {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            line-height: 1;
+            min-height: 10px;
+        }
+
+        .frequency-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        /* =========================
+           FOOTER
+        ========================= */
+
+        .footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        /* =========================
+           STATUS
+        ========================= */
+
+        .status {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .status.success {
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            display: block;
+        }
+
+        .status.error {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--secondary);
+            color: var(--secondary);
+            display: block;
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================= */
+
+        @media (max-width: 600px) {
+
+            .container {
+                padding: 0.75rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .card-value {
+                font-size: 1.5rem;
+            }
+
+            th,
+            td {
+                padding: 0.5rem;
+                font-size: 0.875rem;
+            }
+
+            .frequency-chart-container {
+                height: 350px;
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+
+            .frequency-chart {
+                gap: 1px;
+            }
+
+            .frequency-value {
+                display: none;
+            }
+
+            .frequency-label {
+                font-size: 0.5rem;
+            }
+        }
+        .section-header.powerball-overdue { background: rgba(168, 85, 247, 0.1); }
+        .section-header.powerball-overdue h2 { color: #c084fc; }
+        .section-header.powerball-frequency { background: rgba(245, 158, 11, 0.1); }
+        .section-header.powerball-frequency h2 { color: #fbbf24; }
+    </style>
+</head>
+
+<body>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Status Message -->
+    <div class="status" id="statusMessage"></div>
+
+    <div class="container">
+
+        <!-- Header -->
+        <div class="header">
+            <h1>📈 Powerball Stock Dashboard</h1>
+            <p class="subtitle">
+                Powerball historical draw analysis and generated ticket scoring
+            </p>
+        </div>
+
+        <!-- Refresh Button -->
+        <div class="refresh-container">
+            <button
+                class="refresh-btn"
+                id="refreshBtn"
+                onclick="refreshData()"
+            >
+                <span>🔄 Refresh Analysis</span>
+            </button>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="cards" id="cardsContainer">
+
+            <div class="card">
+                <div class="card-title">Total Tickets</div>
+                <div class="card-value" id="totalTickets">-</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Best Score</div>
+                <div class="card-value" id="bestScore">-</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Average Score</div>
+                <div class="card-value" id="averageScore">-</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Most Overdue</div>
+                <div class="card-value secondary" id="mostOverdueNumber">
+                    -
+                </div>
+                <div class="card-subtitle" id="mostOverdueAge">
+                    -
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid">
+
+            <!-- LEFT: Ranked Tickets -->
+            <div class="section">
+
+                <div class="section-header">
+                    <h2>🎫 Generated Tickets — Ranked by Custom Score</h2>
+                </div>
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Ticket #</th>
+                                <th>Numbers</th>
+                                <th>Powerball</th>
+                                <th style="text-align: right;">
+                                    Sum Drawn
+                                </th>
+                                <th style="text-align: right;">
+                                    Sum Last Ago
+                                </th>
+                                <th style="text-align: right;">
+                                    Score Index
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="ticketsTable">
+                            <!-- Tickets inserted here -->
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN -->
+            <div class="right-column">
+
+                <!-- MOST OVERDUE -->
+                <div class="section">
+
+                    <div class="section-header overdue">
+                        <h2>📉 Most Overdue Numbers</h2>
+                    </div>
+
+                    <div class="chart-container">
+
+                        <div
+                            class="bar-chart"
+                            id="overdueChart"
+                        >
+                            <!-- Chart inserted here -->
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- OVERDUE POWERBALLS -->
+                <div class="section">
+                    <div class="section-header powerball-overdue"><h2>📉 Most Overdue Powerballs</h2></div>
+                    <div class="chart-container"><div class="bar-chart" id="powerballOverdueChart"></div></div>
+                </div>
+                <!-- LAST 10 DRAWS -->
+                <div class="section">
+
+                    <div class="section-header frequency">
+                        <h2>📊 Number Frequency — Last 10 Draws</h2>
+                    </div>
+
+                    <div
+                        class="last-draws-list"
+                        id="lastDrawsList"
+                    >
+                        <!-- Last 10 frequency data inserted here -->
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ALL NUMBERS FREQUENCY -->
+        <div class="section all-numbers-section">
+
+            <div class="section-header frequency">
+                <h2>📊 Number Frequency — All Draws</h2>
+            </div>
+
+            <div class="frequency-chart-container">
+
+                <div
+                    class="frequency-chart"
+                    id="frequencyChart"
+                >
+                    <!-- 1–59 chart inserted here -->
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="section all-numbers-section">
+            <div class="section-header powerball-frequency">
+                <h2>📊 Powerball Frequency — All Draws</h2>
+            </div>
+            <div class="frequency-chart-container">
+                <div class="frequency-chart" id="powerballFrequencyChart"></div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <a href="https://data.ny.gov/resource/d6yy-54nr.csv" target="_blank" rel="noopener noreferrer" style="color:var(--primary)">Source: NY State Open Data — Powerball</a>
+            <div id="dataDetails">No verified draw data loaded.</div>
+            <div>The original charts and score cover the five main numbers; Powerball has separate overdue and frequency graphs. Analysis uses draws since October 7, 2015 (current rules). Tickets are randomly generated; the custom score is not a winning probability.</div>
+        </div>
+
+    </div>
+
+    <script>
+
+        // =========================
+        // CONFIG
+        // =========================
+
+        const CONFIG = {
+            NUMBER_OF_TICKETS: 33,
+            AVOID_CONSECUTIVE: true,
+            MAIN_MAX: 69,
+            PAGE_SIZE: 1000,
+            SOURCE: "https://data.ny.gov/resource/d6yy-54nr.csv",
+            NUMBERS_PER_DRAW: 5,
+
+            // Number of overdue numbers displayed
+            NUMBERS_OVERDUE: 20,
+
+            // Number of historical numbers checked
+            TICKETS_NUMBER_DRAWN_CHECK: 4,
+
+            // Number of recent draws for frequency analysis
+            LAST_DRAWS_FREQUENCY: 10
+        };
+
+
+        // =========================
+        // STATE
+        // =========================
+
+        let historicalData = [];
+        let countDrawn = {};
+        let overdue = {};
+        let historicalCombinations = new Set();
+
+
+        // =========================
+        // INITIALIZE
+        // =========================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshData();
+        });
+
+
+        // =========================
+        // REFRESH
+        // =========================
+
+        function clearDashboard() {
+            historicalData = [];
+            countDrawn = {};
+            overdue = {};
+            historicalCombinations = new Set();
+            for (const id of ['totalTickets', 'bestScore', 'averageScore', 'mostOverdueNumber', 'mostOverdueAge']) {
+                document.getElementById(id).textContent = '—';
+            }
+            for (const id of ['ticketsTable', 'overdueChart', 'lastDrawsList', 'frequencyChart', 'powerballOverdueChart', 'powerballFrequencyChart']) {
+                document.getElementById(id).replaceChildren();
+            }
+            document.getElementById('dataDetails').textContent = 'No verified draw data loaded.';
+        }
+
+        async function refreshData() {
+            const status = document.getElementById('statusMessage');
+            const button = document.getElementById('refreshBtn');
+            document.getElementById('loadingOverlay').classList.add('active');
+            button.disabled = true;
+            button.innerHTML = '<div class="spinner"></div><span>Loading...</span>';
+            status.className = 'status';
+            status.style.display = 'none';
+            clearDashboard();
+
+            try {
+                await fetchData();
+                processData();
+                const tickets = generateTickets();
+                renderDashboard(tickets, calculateMetrics(tickets));
+                const newest = historicalData[0]['Draw Date'];
+                const oldest = historicalData[historicalData.length - 1]['Draw Date'];
+                document.getElementById('dataDetails').textContent =
+                    `${historicalData.length.toLocaleString()} verified draws · ${oldest} through ${newest} · Retrieved ${new Date().toLocaleString()}`;
+                status.textContent = `✓ Loaded ${historicalData.length.toLocaleString()} actual draws. Latest draw: ${newest}.`;
+                status.className = 'status success';
+            } catch (error) {
+                console.error('Error:', error);
+                clearDashboard();
+                status.textContent = `Unable to load verified lottery data: ${error.message}. Check your connection and try Refresh Analysis.`;
+                status.className = 'status error';
+            } finally {
+                status.style.display = 'block';
+                document.getElementById('loadingOverlay').classList.remove('active');
+                button.disabled = false;
+                button.innerHTML = '<span>🔄 Refresh Analysis</span>';
+            }
+        }
+
+const ERAS = {
+ early:{start:'2010-02-03',end:'2012-01-18',white:59,power:39},
+ middle:{start:'2012-01-18',end:'2015-10-07',white:59,power:35},
+ current:{start:'2015-10-07',end:'9999-12-31',white:69,power:26}
+};
+function eraFor(date) {return Object.keys(ERAS).find(k=>date>=ERAS[k].start && date<ERAS[k].end);}
+function validateRows(rows) {
+ const seen=new Set();
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ return rows.map(row=>{
+  const raw=row.draw_date||'', date=raw.slice(0,10), epoch=Date.parse(date+'T00:00:00Z');
+  if(!/^\d{4}-\d{2}-\d{2}T00:00:00(?:\.0+)?$/.test(raw) || !Number.isFinite(epoch) || new Date(epoch).toISOString().slice(0,10)!==date || date>today) throw new Error('Invalid or future draw date');
+  const era=eraFor(date), tokens=(row.winning_numbers||'').trim().split(/\s+/), nums=tokens.map(Number);
+  if(!era || tokens.length!==6 || tokens.some(t=>!/^\d{1,2}$/.test(t))) throw new Error(`Invalid draw format on ${date}`);
+  const white=nums.slice(0,5), power=nums[5], rule=ERAS[era];
+  if(new Set(white).size!==5 || white.some(n=>n<1||n>rule.white) || power<1||power>rule.power) throw new Error(`Invalid ball range or duplicate white ball on ${date}`);
+  if(seen.has(date)) throw new Error(`Duplicate draw date ${date}; refresh to retry`);
+  seen.add(date);
+  const multiplier=(row.multiplier||'').trim();
+  if(multiplier && !['2','3','4','5','10'].includes(multiplier)) throw new Error(`Invalid Power Play on ${date}`);
+  return {date,era,white:white.sort((a,b)=>a-b),power,multiplier};
+ }).sort((a,b)=>b.date.localeCompare(a.date));
+}
+async function requestCSV(url) {
+ const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),30000);
+ try {const response=await fetch(url,{cache:'no-store',signal:controller.signal});
+ if(!response.ok) throw new Error(`Source returned HTTP ${response.status}`);
+ return parseCSV(await response.text());} finally {clearTimeout(timer);}
+}
+// Descending keyset pagination: new draws inserted during loading cannot shift later pages.
+async function fetchValidatedData() {
+ const rows=[]; let before=null;
+ for(let page=0;page<1000;page++) {
+  const url=new URL(CONFIG.SOURCE);
+  url.searchParams.set('$select','draw_date,winning_numbers,multiplier');
+  url.searchParams.set('$order','draw_date DESC');url.searchParams.set('$limit',String(CONFIG.PAGE_SIZE));
+  if(before) url.searchParams.set('$where',`draw_date < '${before}T00:00:00.000'`);
+  const raw=await requestCSV(url.toString()), valid=validateRows(raw);
+  if(valid.length>CONFIG.PAGE_SIZE) throw new Error('Source ignored page limit');
+  if(valid.some(d=>before && d.date>=before)) throw new Error('Source pagination did not advance');
+  rows.push(...raw);
+  if(raw.length<CONFIG.PAGE_SIZE) {
+   if(!rows.length) throw new Error('Source returned no draws');
+   return validateRows(rows);
+  }
+  before=valid[valid.length-1].date;
+ }
+ throw new Error('Pagination safety limit reached; no partial results displayed');
+}
+
+        async function fetchData() {
+            const draws = await fetchValidatedData();
+            historicalData = draws.filter(d => d.era === 'current').map(d => ({
+                'Draw Date': d.date,
+                'Winning Numbers': d.white.join(' '),
+                powerball: d.power
+            }));
+            if (!historicalData.length) throw new Error('No current-rule Powerball draws available');
+        }
+
+        // Handle quoted CSV fields, escaped quotes, CRLF, and a UTF-8 BOM.
+        function parseCSV(csvText) {
+            const rows = [];
+            let row = [], field = '', quoted = false;
+            const text = csvText.replace(/^\uFEFF/, '');
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (char === '"') {
+                    if (quoted && text[i + 1] === '"') { field += '"'; i++; }
+                    else quoted = !quoted;
+                } else if (char === ',' && !quoted) {
+                    row.push(field); field = '';
+                } else if ((char === '\n' || char === '\r') && !quoted) {
+                    if (char === '\r' && text[i + 1] === '\n') i++;
+                    row.push(field);
+                    if (row.some(value => value.trim())) rows.push(row);
+                    row = []; field = '';
+                } else field += char;
+            }
+            if (quoted) throw new Error('The source returned incomplete CSV');
+            row.push(field);
+            if (row.some(value => value.trim())) rows.push(row);
+            if (!rows.length) throw new Error('The source returned an empty CSV');
+            const headers = rows.shift().map(value => value.trim());
+            if (!headers.includes('draw_date') || !headers.includes('winning_numbers')) {
+                throw new Error('Expected draw_date and winning_numbers columns');
+            }
+            return rows.map(values => {
+                if (values.length !== headers.length) throw new Error('The source returned an incomplete row');
+                return Object.fromEntries(headers.map((header, index) => [header, values[index].trim()]));
+            });
+        }
+
+
+        // =========================
+        // PROCESS DATA
+        // =========================
+
+        function processData() {
+
+            countDrawn = {};
+            overdue = {};
+            historicalCombinations = new Set();
+
+            for (
+                let n = 1;
+                n <= CONFIG.MAIN_MAX;
+                n++
+            ) {
+                countDrawn[n] = 0;
+                overdue[n] = 0;
+            }
+
+            /*
+             * fetchData explicitly sorts validated draws newest first.
+             * Reverse it so processing occurs oldest -> newest.
+             */
+            const sortedData =
+                [...historicalData].reverse();
+
+            sortedData.forEach((row) => {
+
+                const numbers =
+                    parseNumbers(
+                        row['Winning Numbers']
+                    );
+
+                numbers.forEach(n => {
+
+                    if (
+                        n >= 1 &&
+                        n <= CONFIG.MAIN_MAX
+                    ) {
+                        countDrawn[n] =
+                            (countDrawn[n] || 0) + 1;
+                    }
+
+                });
+
+                if (
+                    CONFIG.TICKETS_NUMBER_DRAWN_CHECK > 0
+                ) {
+
+                    const sortedNums =
+                        [...numbers].sort(
+                            (a, b) => a - b
+                        );
+
+                    const combos =
+                        combinations(
+                            sortedNums,
+                            CONFIG.TICKETS_NUMBER_DRAWN_CHECK
+                        );
+
+                    combos.forEach(combo => {
+
+                        historicalCombinations.add(
+                            combo.join(',')
+                        );
+
+                    });
+                }
+            });
+
+
+            // Calculate overdue
+            const totalDraws =
+                sortedData.length;
+
+            for (
+                let n = 1;
+                n <= CONFIG.MAIN_MAX;
+                n++
+            ) {
+
+                let lastIndex = -1;
+
+                for (
+                    let i = sortedData.length - 1;
+                    i >= 0;
+                    i--
+                ) {
+
+                    const numbers =
+                        parseNumbers(
+                            sortedData[i]['Winning Numbers']
+                        );
+
+                    if (numbers.includes(n)) {
+
+                        lastIndex = i;
+                        break;
+                    }
+                }
+
+                overdue[n] =
+                    lastIndex === -1
+                        ? totalDraws
+                        : totalDraws - 1 - lastIndex;
+            }
+        }
+
+
+        // =========================
+        // HELPERS
+        // =========================
+
+        function parseNumbers(text) {
+
+            if (!text) return [];
+
+            return text
+                .trim().split(/\s+/)
+                .slice(
+                    0,
+                    CONFIG.NUMBERS_PER_DRAW
+                )
+                .map(n => parseInt(n, 10))
+                .filter(n => !isNaN(n));
+        }
+
+
+        function combinations(arr, size) {
+
+            const result = [];
+
+            function combine(start, current) {
+
+                if (current.length === size) {
+
+                    result.push([...current]);
+
+                    return;
+                }
+
+                for (
+                    let i = start;
+                    i < arr.length;
+                    i++
+                ) {
+
+                    current.push(arr[i]);
+
+                    combine(i + 1, current);
+
+                    current.pop();
+                }
+            }
+
+            combine(0, []);
+
+            return result;
+        }
+
+
+        function hasConsecutive(numbers) {
+
+            const sorted =
+                [...numbers].sort(
+                    (a, b) => a - b
+                );
+
+            for (
+                let i = 0;
+                i < sorted.length - 1;
+                i++
+            ) {
+
+                if (
+                    sorted[i] + 1 ===
+                    sorted[i + 1]
+                ) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+
+        function randomInt(min, max) {
+
+            return Math.floor(
+                Math.random() *
+                (max - min + 1)
+            ) + min;
+        }
+
+
+        // =========================
+        // GENERATE TICKETS
+        // =========================
+
+        function generateTickets() {
+
+            const tickets = [];
+
+            const maxAttempts = 1000000;
+
+            for (
+                let i = 0;
+                i < CONFIG.NUMBER_OF_TICKETS;
+                i++
+            ) {
+
+                let attempts = 0;
+
+                let ticket;
+
+                while (
+                    attempts < maxAttempts
+                ) {
+
+                    attempts++;
+
+                    const numbers = new Set();
+
+                    while (
+                        numbers.size <
+                        CONFIG.NUMBERS_PER_DRAW
+                    ) {
+
+                        numbers.add(
+                            randomInt(
+                                1,
+                                CONFIG.MAIN_MAX
+                            )
+                        );
+                    }
+
+                    ticket =
+                        [...numbers].sort(
+                            (a, b) => a - b
+                        );
+
+
+                    if (
+                        CONFIG.AVOID_CONSECUTIVE &&
+                        hasConsecutive(ticket)
+                    ) {
+                        continue;
+                    }
+
+
+                    if (
+                        CONFIG.TICKETS_NUMBER_DRAWN_CHECK > 0
+                    ) {
+
+                        const ticketCombos =
+                            combinations(
+                                ticket,
+                                CONFIG.TICKETS_NUMBER_DRAWN_CHECK
+                            );
+
+                        let valid = true;
+
+                        for (
+                            const combo
+                            of ticketCombos
+                        ) {
+
+                            if (
+                                historicalCombinations.has(
+                                    combo.join(',')
+                                )
+                            ) {
+
+                                valid = false;
+                                break;
+                            }
+                        }
+
+                        if (!valid) continue;
+                    }
+
+
+                    ticket.powerball = randomInt(1, 26);
+                    tickets.push(ticket);
+
+                    break;
+                }
+
+
+                if (
+                    attempts >= maxAttempts
+                ) {
+
+                    console.error(
+                        `Could not find valid ticket after ${maxAttempts} attempts`
+                    );
+
+                    break;
+                }
+            }
+
+            return tickets;
+        }
+
+
+        // =========================
+        // CALCULATE METRICS
+        // =========================
+
+        function calculateMetrics(tickets) {
+
+            return tickets
+                .map((numbers, index) => {
+
+                    const sumDrawn =
+                        numbers.reduce(
+                            (sum, n) =>
+                                sum +
+                                (countDrawn[n] || 0),
+                            0
+                        );
+
+                    const sumLast =
+                        numbers.reduce(
+                            (sum, n) =>
+                                sum +
+                                (overdue[n] || 0),
+                            0
+                        );
+
+                    const score =
+                        sumDrawn === 0
+                            ? 0
+                            : Math.round(
+                                (sumLast /
+                                sumDrawn) *
+                                100
+                            );
+
+                    return {
+                        ticket: index + 1,
+                        powerball: numbers.powerball,
+                        numbers,
+                        sumDrawn,
+                        sumLast,
+                        score
+                    };
+
+                })
+                .sort(
+                    (a, b) =>
+                        b.score - a.score
+                );
+        }
+
+
+        // =========================
+        // RENDER DASHBOARD
+        // =========================
+
+        function renderDashboard(
+            tickets,
+            results
+        ) {
+
+            // -------------------------
+            // SUMMARY
+            // -------------------------
+
+            const allScores =
+                results.map(r => r.score);
+
+            const avgScore =
+                allScores.length
+                    ? allScores.reduce(
+                        (a, b) => a + b,
+                        0
+                    ) / allScores.length
+                    : 0;
+
+            const bestScore =
+                allScores.length
+                    ? Math.max(...allScores)
+                    : 0;
+
+            const mostOverdue =
+                Object.entries(overdue)
+                    .reduce(
+                        (
+                            max,
+                            [num, age]
+                        ) =>
+                            age > max.age
+                                ? {
+                                    num: parseInt(num),
+                                    age
+                                }
+                                : max,
+                        {
+                            num: 0,
+                            age: 0
+                        }
+                    );
+
+
+            document
+                .getElementById('totalTickets')
+                .textContent =
+                results.length;
+
+            document
+                .getElementById('bestScore')
+                .textContent =
+                `${bestScore}`;
+
+            document
+                .getElementById('averageScore')
+                .textContent =
+                `${Math.round(avgScore)}`;
+
+            document
+                .getElementById('mostOverdueNumber')
+                .textContent =
+                `#${mostOverdue.num}`;
+
+            document
+                .getElementById('mostOverdueAge')
+                .textContent =
+                `${mostOverdue.age} draws ago`;
+
+
+            // -------------------------
+            // RANKED TICKETS
+            // -------------------------
+
+            const ticketsTable =
+                document.getElementById(
+                    'ticketsTable'
+                );
+
+            ticketsTable.innerHTML = '';
+
+            results.forEach(
+                (ticket, index) => {
+
+                    const row =
+                        document.createElement(
+                            'tr'
+                        );
+
+                    const scoreClass =
+                        ticket.score >= 70
+                            ? 'score-high'
+                            : ticket.score >= 50
+                                ? 'score-medium'
+                                : 'score-low';
+
+
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${ticket.ticket}</td>
+                        <td class="numbers">
+                            ${ticket.numbers
+                                .map(
+                                    n =>
+                                        n
+                                            .toString()
+                                            .padStart(2, '0')
+                                )
+                                .join(' ')
+                            }
+                        </td>
+                        <td style="color:var(--secondary);font-weight:700;">
+                            ${String(ticket.powerball).padStart(2, '0')}
+                        </td>
+                        <td style="text-align:right;color:var(--text-secondary);">
+                            ${ticket.sumDrawn}
+                        </td>
+                        <td style="text-align:right;color:var(--text-secondary);">
+                            ${ticket.sumLast}
+                        </td>
+                        <td style="text-align:right;" class="${scoreClass}">
+                            ${ticket.score}
+                        </td>
+                    `;
+
+                    ticketsTable.appendChild(row);
+                }
+            );
+
+
+            // -------------------------
+            // MOST OVERDUE
+            // -------------------------
+
+            const overdueChart =
+                document.getElementById(
+                    'overdueChart'
+                );
+
+            overdueChart.innerHTML = '';
+
+            const overdueList =
+                Object.entries(overdue)
+                    .map(
+                        ([num, age]) => ({
+                            num: parseInt(num),
+                            age
+                        })
+                    )
+                    .sort(
+                        (a, b) =>
+                            b.age - a.age
+                    )
+                    .slice(
+                        0,
+                        CONFIG.NUMBERS_OVERDUE
+                    );
+
+            const maxOverdue =
+                overdueList.length
+                    ? overdueList[0].age
+                    : 1;
+
+
+            overdueList.forEach(
+                (item, index) => {
+
+                    const barItem =
+                        document.createElement(
+                            'div'
+                        );
+
+                    barItem.className =
+                        'bar-item';
+
+                    const barWidth =
+                        maxOverdue > 0
+                            ? (
+                                item.age /
+                                maxOverdue
+                            ) * 100
+                            : 0;
+
+
+                    barItem.innerHTML = `
+                        <div class="bar-label">
+                            #${item.num}
+                        </div>
+
+                        <div class="bar-container">
+                            <div
+                                class="bar-fill"
+                                style="
+                                    width:${barWidth}%;
+                                    background-color:#ef4444;
+                                "
+                            ></div>
+                        </div>
+
+                        <div class="bar-value">
+                            ${item.age}
+                        </div>
+                    `;
+
+                    overdueChart.appendChild(
+                        barItem
+                    );
+                }
+            );
+
+
+            // -------------------------
+            // LAST 10 DRAWS FREQUENCY
+            // -------------------------
+
+            renderPowerballOverdue();
+            renderLastDrawsFrequency();
+
+
+            // -------------------------
+            // ALL NUMBERS FREQUENCY
+            // -------------------------
+
+            renderAllNumbersFrequency();
+            renderPowerballFrequency();
+        }
+
+
+        // =========================
+        // LAST 10 DRAWS FREQUENCY
+        // =========================
+
+        function renderLastDrawsFrequency() {
+
+            const container =
+                document.getElementById(
+                    'lastDrawsList'
+                );
+
+            container.innerHTML = '';
+
+            /*
+             * historicalData is newest first.
+             * Take the first 10 draws.
+             */
+
+            const recentDraws =
+                historicalData.slice(
+                    0,
+                    CONFIG.LAST_DRAWS_FREQUENCY
+                );
+
+            const recentCount = {};
+
+            for (
+                let n = 1;
+                n <= CONFIG.MAIN_MAX;
+                n++
+            ) {
+                recentCount[n] = 0;
+            }
+
+
+            recentDraws.forEach(row => {
+
+                const numbers =
+                    parseNumbers(
+                        row['Winning Numbers']
+                    );
+
+                numbers.forEach(n => {
+
+                    if (
+                        n >= 1 &&
+                        n <= CONFIG.MAIN_MAX
+                    ) {
+                        recentCount[n]++;
+                    }
+
+                });
+            });
+
+
+            const frequencyList =
+                Object.entries(recentCount)
+                    .map(
+                        ([num, count]) => ({
+                            num: parseInt(num),
+                            count
+                        })
+                    )
+                    .sort(
+                        (a, b) => {
+
+                            if (
+                                b.count !==
+                                a.count
+                            ) {
+                                return (
+                                    b.count -
+                                    a.count
+                                );
+                            }
+
+                            return a.num - b.num;
+                        }
+                    )
+                    .filter(
+                        item => item.count > 0
+                    )
+                    .slice(0, 15);
+
+
+            if (!frequencyList.length) {
+
+                container.innerHTML =
+                    '<div style="color:var(--text-secondary);">No data available.</div>';
+
+                return;
+            }
+
+
+            frequencyList.forEach(item => {
+
+                const div =
+                    document.createElement(
+                        'div'
+                    );
+
+                div.className =
+                    'last-draw-item';
+
+                div.innerHTML = `
+                    <span class="last-draw-number">
+                        #${item.num}
+                    </span>
+
+                    <span class="last-draw-frequency">
+                        ${item.count}
+                        ${item.count === 1
+                            ? 'time'
+                            : 'times'}
+                    </span>
+                `;
+
+                container.appendChild(div);
+            });
+        }
+
+
+        // =========================
+        // ALL NUMBERS FREQUENCY
+        // =========================
+
+        function renderAllNumbersFrequency() {
+
+            const chart =
+                document.getElementById(
+                    'frequencyChart'
+                );
+
+            chart.innerHTML = '';
+
+
+            let maxCount = 0;
+
+            for (
+                let n = 1;
+                n <= CONFIG.MAIN_MAX;
+                n++
+            ) {
+
+                if (
+                    countDrawn[n] >
+                    maxCount
+                ) {
+                    maxCount =
+                        countDrawn[n];
+                }
+            }
+
+
+            for (
+                let n = 1;
+                n <= CONFIG.MAIN_MAX;
+                n++
+            ) {
+
+                const count =
+                    countDrawn[n] || 0;
+
+                const height =
+                    maxCount > 0
+                        ? (
+                            count /
+                            maxCount
+                        ) * 100
+                        : 0;
+
+
+                const item =
+                    document.createElement(
+                        'div'
+                    );
+
+                item.className =
+                    'frequency-bar-item';
+
+
+                item.innerHTML = `
+                    <div class="frequency-value">
+                        ${count}
+                    </div>
+
+                    <div
+                        class="frequency-bar"
+                        style="height:${height}%"
+                        title="Number ${n}: ${count} draws"
+                    ></div>
+
+                    <div class="frequency-label">
+                        ${n}
+                    </div>
+                `;
+
+
+                chart.appendChild(item);
+            }
+        }
+
+
+        // =========================
+        // AUTO REFRESH
+        // =========================
+
+        // Uncomment to enable:
+        //
+        // setInterval(
+        //     refreshData,
+        //     5 * 60 * 1000
+        // );
+
+
+        function renderPowerballOverdue() {
+            const list = Array.from({length: 26}, (_, i) => {
+                const num = i + 1;
+                const index = historicalData.findIndex(row => row.powerball === num);
+                return {num, age: index < 0 ? historicalData.length : index, unseen: index < 0};
+            }).sort((a, b) => b.age - a.age || a.num - b.num);
+            const max = Math.max(1, list[0].age);
+            document.getElementById('powerballOverdueChart').innerHTML = list.map(item => `
+                <div class="bar-item">
+                    <div class="bar-label">#${item.num}</div>
+                    <div class="bar-container"><div class="bar-fill" style="width:${item.age / max * 100}%;background-color:#a855f7;"></div></div>
+                    <div class="bar-value" title="${item.unseen ? 'Not seen in loaded draws; at least this many draws ago' : 'Draws since last appearance'}">${item.unseen ? '≥' : ''}${item.age}</div>
+                </div>`).join('');
+        }
+
+        function renderPowerballFrequency() {
+            const counts = Array(26).fill(0);
+            historicalData.forEach(row => counts[row.powerball - 1]++);
+            const max = Math.max(1, ...counts);
+            document.getElementById('powerballFrequencyChart').innerHTML = counts.map((count, index) => `
+                <div class="frequency-bar-item">
+                    <div class="frequency-value">${count}</div>
+                    <div class="frequency-bar" style="height:${count / max * 85}%;background-color:#f59e0b;"
+                         title="Powerball ${index + 1}: ${count} draws"></div>
+                    <div class="frequency-label">${index + 1}</div>
+                </div>`).join('');
+        }
+
+    </script>
+
+</body>
+</html>
